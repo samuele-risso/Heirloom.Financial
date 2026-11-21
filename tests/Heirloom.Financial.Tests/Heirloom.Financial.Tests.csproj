@@ -23,4 +23,9 @@
     <ProjectReference Include="..\..\src\Heirloom.Financial\Heirloom.Financial.csproj" />
   </ItemGroup>
 
+ <ItemGroup>
+    <!-- I CSV di riferimento vengono copiati accanto ai test compilati -->
+    <None Update="TestData\Reference\*.csv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

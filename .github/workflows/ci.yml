@@ -1,0 +1,75 @@
+# Pipeline di integrazione continua di Heirloom.Financial (HA-004).
+# A ogni push e pull request verso main o develop:
+# installa .NET 9 e 10, compila, esegue i test su entrambe le versioni,
+# misura la copertura e pubblica il riepilogo nella pagina della pipeline.
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Se arriva un nuovo push sullo stesso branch, la pipeline vecchia viene annullata.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build e test
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v6
+
+      - name: Installa .NET 9 e .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+
+      - name: Ripristina i pacchetti NuGet
+        run: dotnet restore
+
+      - name: Compila
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Esegui i test con copertura
+        run: >
+          dotnet test
+          --configuration Release
+          --no-build
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+          --logger "trx"
+
+      - name: Crea il report di copertura
+        if: always()
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
+            -targetdir:"CoverageReport" \
+            -reporttypes:"Html;MarkdownSummaryGithub"
+          cat CoverageReport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Salva risultati dei test e report di copertura
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-e-copertura
+          path: |
+            TestResults/
+            CoverageReport/
+          retention-days: 14

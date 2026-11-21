@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Heirloom.Financial/Heirloom.Financial.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Heirloom.Financial.Tests/Heirloom.Financial.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <RootNamespace>Heirloom.Financial</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Permette ai test di usare le classi internal (es. Internal/Rounding) -->
+    <InternalsVisibleTo Include="Heirloom.Financial.Tests" />
+  </ItemGroup>
+
+</Project>

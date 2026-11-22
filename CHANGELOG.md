@@ -4,6 +4,22 @@ Tutte le modifiche rilevanti di Heirloom.Financial. Il formato segue
 [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e le versioni seguono il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [1.3.0] - 2026-11-22
+
+Lo storico per i grafici si calcola dalla libreria a partire da transazioni e prezzi giornalieri,
+senza fotografie salvate.
+
+### Aggiunto
+- `HistoryPoint`: ogni giorno anche costo di carico, guadagno sulla carta (valore e percentuale, solo pezzi a costo noto)
+  e `Metals`, con valore, costo e spot per grammo fino di ogni metallo.
+- Pipeline `Release`: si ferma se il `CHANGELOG.md` del commit taggato non ha la sezione della versione del tag.
+
+## [1.2.1] - 2026-11-22
+
+### Corretto
+- Ripubblicazione della 1.2.0: il pacchetto 1.2.0 era stato creato da un `main` senza le modifiche della versione.
+  Non usare la 1.2.0.
+
 ## [1.2.0] - 2026-11-22
 
 Tutti i calcoli finanziari di Heirloom passano alla libreria: Heirloom.Core legge e scrive il database e non calcola più nulla.
@@ -68,6 +84,8 @@ Prima versione stabile, pronta per l'integrazione in Heirloom.
 - Test unitari, property test con FsCheck, casi di riferimento verificati con Excel e Python, casi estremi.
 - CI su .NET 9 e .NET 10 con copertura minima del 90% delle righe; configurazione di Stryker.NET.
 
+[1.3.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.3.0
+[1.2.1]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.2.1
 [1.2.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.2.0
 [1.1.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.1.0
 [1.0.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.0.0

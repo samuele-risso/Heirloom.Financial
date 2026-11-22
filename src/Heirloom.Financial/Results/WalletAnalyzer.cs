@@ -5,6 +5,8 @@ using Heirloom.Financial.Internal;
 using Heirloom.Financial.Performance;
 using Heirloom.Financial.Positions;
 using Heirloom.Financial.Risk;
+using Heirloom.Financial.Taxation;
+using Heirloom.Financial.Valuation;
 using Heirloom.Financial.Validation;
 
 namespace Heirloom.Financial.Results;
@@ -53,6 +55,14 @@ public static class WalletAnalyzer
         DomainGuards.Defined(options.CostBasisMethod);
         DomainGuards.Defined(options.AnnualizationBasis);
 
+        if (options.TaxPolicy is not null && options.CostBasisMethod == CostBasisMethod.WeightedAverage)
+        {
+            throw new ArgumentException(
+                "La stima delle tasse richiede FIFO o lotto specifico: con la media ponderata gli acquisti si fondono " +
+                "e non si sa quali pezzi hanno la fattura.",
+                nameof(options));
+        }
+
         var currency = options.Currency;
         var date = options.ValuationDate;
         var spotList = spots.ToList();
@@ -72,6 +82,10 @@ public static class WalletAnalyzer
         var notes = new List<string>();
         var (performance, risk) = BuildHistory(lotList, spotList, pnl, options, rates, notes);
 
+        var spotByMetal = todaySpots.ToDictionary(s => s.Metal);
+        var openLots = ValueOpenLots(costBasis.OpenLots, spotByMetal, pnl.TotalValue, options);
+        var tax = Taxes(openLots, currency, options.TaxPolicy);
+
         return new WalletSummary(
             currency.ToIsoCode(),
             date,
@@ -85,14 +99,124 @@ public static class WalletAnalyzer
             MoneyResult.From(pnl.RealizedPnL),
             MoneyResult.From(costBasis.UnknownCostProceeds),
             MoneyResult.From(pnl.TotalPnL),
+            tax is null ? null : MoneyResult.From(tax.Value.Total),
+            tax is null ? null : MoneyResult.From(pnl.TotalValue - tax.Value.Total),
+            tax is null ? null : MoneyResult.From(tax.Value.KnownCostPnLAfterTax),
             FineGrams(costBasis, Metal.Gold),
             FineGrams(costBasis, Metal.Silver),
             pnl.Positions.Select(PositionValuation.From).ToList(),
+            openLots.Select(l => l.Result).ToList(),
+            pnl.Positions.GroupBy(p => p.Position.Product.Metal).OrderBy(g => g.Key)
+                .Select(g => SummarizeMetal(g.Key, g.ToList(), spotByMetal[g.Key])).ToList(),
+            CashFlow(lotList, currency),
             AllocationShare.From(AllocationCalculator.Calculate(pnl, AllocationGrouping.Metal, AllocationBasis.Value)),
             AllocationShare.From(AllocationCalculator.Calculate(pnl, AllocationGrouping.Form, AllocationBasis.Value)),
             performance,
             risk,
             notes);
+    }
+
+    /// <summary>Un lotto aperto valutato: i valori esatti per i totali e il risultato arrotondato per l'API.</summary>
+    private sealed record ValuedLot(OpenLot Lot, Money Value, Money? Tax, LotValuation Result);
+
+    private static List<ValuedLot> ValueOpenLots(
+        IReadOnlyList<OpenLot> openLots,
+        IReadOnlyDictionary<Metal, SpotPrice> spots,
+        Money totalValue,
+        WalletAnalysisOptions options)
+    {
+        return openLots.Select(open =>
+        {
+            var value = options.Valuation.Value(open.Product, open.Quantity, spots[open.Product.Metal]);
+            var pnl = open.Cost is { } cost ? value - cost : (Money?)null;
+            var tax = options.TaxPolicy?.EstimateTax(value, open.Cost, open.HasDocumentedCost);
+
+            var result = new LotValuation(
+                open.Purchase.Id,
+                open.Product.Name,
+                open.Product.Metal,
+                open.Product.Form,
+                open.Purchase.Date,
+                open.Quantity,
+                Rounding.Grams(open.FineWeight).Grams,
+                MoneyResult.From(value),
+                totalValue.IsZero ? null : Rounding.Percentage(value / totalValue),
+                MoneyResult.FromOptional(open.Cost),
+                MoneyResult.FromOptional(pnl),
+                open.Cost is { IsZero: false } c && pnl is { } gain ? Rounding.Percentage(gain / c) : null,
+                open.HasDocumentedCost,
+                MoneyResult.FromOptional(tax));
+
+            return new ValuedLot(open, value, tax, result);
+        }).ToList();
+    }
+
+    private static (Money Total, Money KnownCostPnLAfterTax)? Taxes(IReadOnlyList<ValuedLot> lots, Currency currency, ITaxPolicy? policy)
+    {
+        if (policy is null)
+        {
+            return null;
+        }
+
+        var total = Money.Zero(currency);
+        var knownAfterTax = Money.Zero(currency);
+
+        foreach (var lot in lots)
+        {
+            total += lot.Tax!.Value;
+
+            if (lot.Lot.Cost is { } cost)
+            {
+                knownAfterTax += lot.Value - lot.Tax.Value - cost;
+            }
+        }
+
+        return (total, knownAfterTax);
+    }
+
+    private static MetalSummary SummarizeMetal(Metal metal, IReadOnlyList<PositionPnL> positions, SpotPrice spot)
+    {
+        var gross = positions.Aggregate(Weight.Zero, (sum, p) => sum + p.Position.Product.GrossWeight * p.Position.Quantity);
+        var fine = positions.Aggregate(Weight.Zero, (sum, p) => sum + p.Position.FineWeight);
+        var coinGross = positions
+            .Where(p => p.Position.Product.Form == ProductForm.Coin)
+            .Aggregate(Weight.Zero, (sum, p) => sum + p.Position.Product.GrossWeight * p.Position.Quantity);
+
+        var value = positions.Aggregate(Money.Zero(spot.Currency), (sum, p) => sum + p.Value);
+        var cost = positions.Aggregate(Money.Zero(spot.Currency), (sum, p) => sum + p.Position.CostBasis);
+
+        // Il costo medio usa solo i pezzi di cui si conosce il costo, così un'eredità non lo abbassa.
+        var knownFine = positions.Aggregate(Weight.Zero, (sum, p) => sum + p.Position.Product.FineWeight * p.Position.KnownCostQuantity);
+
+        var coinShare = gross.Grams > 0m ? Rounding.Percentage(coinGross.Grams / gross.Grams) : 0m;
+
+        return new MetalSummary(
+            metal,
+            Rounding.Grams(gross).Grams,
+            Rounding.Grams(fine).Grams,
+            Math.Round(fine.TroyOunces, Rounding.WeightDecimals, MidpointRounding.AwayFromZero),
+            MoneyResult.From(value),
+            MoneyResult.From(cost),
+            knownFine.Grams > 0m ? Rounding.UnitPrice(cost.Amount / knownFine.Grams) : null,
+            Rounding.UnitPrice(spot.PricePerGram.Amount),
+            coinShare,
+            gross.Grams > 0m ? 1m - coinShare : 0m);
+    }
+
+    private static CashFlowSummary CashFlow(IReadOnlyList<Lot> lots, Currency currency)
+    {
+        var buys = lots.Where(l => l.Side == LotSide.Buy).ToList();
+        var sells = lots.Where(l => l.Side == LotSide.Sell).ToList();
+
+        var purchases = buys.Aggregate(Money.Zero(currency), (sum, l) => sum + l.NetAmount);
+        var sales = sells.Aggregate(Money.Zero(currency), (sum, l) => sum + l.NetAmount);
+
+        return new CashFlowSummary(
+            MoneyResult.From(purchases),
+            buys.Count,
+            MoneyResult.From(sales),
+            sells.Count,
+            MoneyResult.From(sales - purchases));
     }
 
     private static List<Lot> ConvertLots(IEnumerable<Lot> lots, Currency currency, DateOnly date, FxRateSeries? rates)

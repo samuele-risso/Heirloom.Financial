@@ -99,7 +99,16 @@ public static class CostBasisCalculator
             .ThenBy(p => p.Product.Name, StringComparer.Ordinal)
             .ToList();
 
-        return new CostBasisResult(method, currency, positions, sales);
+        // Con FIFO e lotto specifico ogni pacchetto è un acquisto: sono i lotti aperti.
+        var openLots = books.Values
+            .SelectMany(parcels => parcels)
+            .Where(p => p.Source is not null && p.Quantity > 0m)
+            .Select(p => new OpenLot(p.Source!, p.Quantity, p.KnownCost ? p.Cost : null))
+            .OrderBy(o => o.Purchase.Date)
+            .ThenBy(o => o.Product.Name, StringComparer.Ordinal)
+            .ToList();
+
+        return new CostBasisResult(method, currency, positions, sales) { OpenLots = openLots };
     }
 
     private static void ValidateSpecificLots(IReadOnlyList<Lot> lots)
@@ -133,7 +142,9 @@ public static class CostBasisCalculator
 
     private static void AddPurchase(LinkedList<Parcel> parcels, Lot lot, CostBasisMethod method)
     {
-        var parcel = new Parcel(lot.Quantity, lot.NetAmount, lot.HasKnownCost, lot.Id);
+        // Con la media ponderata i pacchetti si fondono: non hanno un acquisto d'origine.
+        var source = method == CostBasisMethod.WeightedAverage ? null : lot;
+        var parcel = new Parcel(lot.Quantity, lot.NetAmount, lot.HasKnownCost, lot.Id, source);
 
         if (method == CostBasisMethod.WeightedAverage && Find(parcels, p => p.KnownCost == lot.HasKnownCost) is { } existing)
         {
@@ -279,5 +290,6 @@ public static class CostBasisCalculator
     /// <param name="Cost">Il costo totale (zero se sconosciuto).</param>
     /// <param name="KnownCost">Se il costo è noto.</param>
     /// <param name="LotId">L'id dell'acquisto d'origine; usato dal metodo per lotto specifico.</param>
-    private readonly record struct Parcel(decimal Quantity, Money Cost, bool KnownCost, string? LotId);
+    /// <param name="Source">L'acquisto d'origine; null con la media ponderata, dove i pacchetti si fondono.</param>
+    private readonly record struct Parcel(decimal Quantity, Money Cost, bool KnownCost, string? LotId, Lot? Source);
 }

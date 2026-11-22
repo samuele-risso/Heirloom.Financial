@@ -1,6 +1,7 @@
 ﻿using Heirloom.Financial.Domain;
 using Heirloom.Financial.Positions;
 using Heirloom.Financial.Risk;
+using Heirloom.Financial.Taxation;
 using Heirloom.Financial.Valuation;
 
 namespace Heirloom.Financial.Results;
@@ -25,6 +26,12 @@ public sealed record WalletAnalysisOptions
 
     /// <summary>La convenzione sui giorni per annualizzare la volatilità.</summary>
     public required AnnualizationBasis AnnualizationBasis { get; init; }
+
+    /// <summary>
+    /// La regola fiscale per stimare le tasse (es. <see cref="ItalianTaxPolicy.Standard"/>); senza, niente tasse nel riepilogo.
+    /// Richiede FIFO o lotto specifico, perché le tasse si calcolano acquisto per acquisto.
+    /// </summary>
+    public ITaxPolicy? TaxPolicy { get; init; }
 
     /// <summary>Il tasso privo di rischio annuo (frazione) per lo Sharpe; senza, lo Sharpe è assente.</summary>
     public decimal? RiskFreeRate { get; init; }

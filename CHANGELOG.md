@@ -4,6 +4,19 @@ Tutte le modifiche rilevanti di Heirloom.Financial. Il formato segue
 [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e le versioni seguono il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [1.2.0] - 2026-11-22
+
+Tutti i calcoli finanziari di Heirloom passano alla libreria: Heirloom.Core legge e scrive il database e non calcola più nulla.
+
+### Aggiunto
+- `Lot.HasDocumentedCost`: se il costo d'acquisto è documentato (fattura).
+- `CostBasisResult.OpenLots`: gli acquisti di cui restano dei pezzi, con il costo di quelli rimasti (FIFO e lotto specifico).
+- Modulo `Taxation`: interfaccia `ITaxPolicy` e regola `ItalianTaxPolicy` (26% sulla plusvalenza con costo documentato,
+  sull'intero valore senza documentazione).
+- `WalletAnalysisOptions.TaxPolicy` e nel riepilogo `EstimatedTax`, `ValueAfterTax`, `UnrealizedPnLAfterTax`.
+- Nel riepilogo: `Lots` (un lotto per acquisto, con valore, costo, guadagno, quota sul totale e tasse),
+  `ByMetal` (pesi, valore, costo, costo medio e spot per grammo fino, quota monete/lingotti) e `CashFlow` (acquisti e vendite).
+
 ## [1.1.0] - 2026-11-22
 
 Prima versione pubblicata come pacchetto NuGet.
@@ -55,5 +68,6 @@ Prima versione stabile, pronta per l'integrazione in Heirloom.
 - Test unitari, property test con FsCheck, casi di riferimento verificati con Excel e Python, casi estremi.
 - CI su .NET 9 e .NET 10 con copertura minima del 90% delle righe; configurazione di Stryker.NET.
 
+[1.2.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.2.0
 [1.1.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.1.0
 [1.0.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.0.0

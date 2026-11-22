@@ -19,9 +19,15 @@ namespace Heirloom.Financial.Results;
 /// <param name="RealizedPnL">Il guadagno già incassato con le vendite.</param>
 /// <param name="UnknownCostProceeds">L'incasso di vendite di pezzi a costo sconosciuto, senza guadagno calcolabile.</param>
 /// <param name="TotalPnL">Il guadagno complessivo: realizzato più sulla carta.</param>
+/// <param name="EstimatedTax">Le tasse stimate se si vendesse tutto oggi; null senza regola fiscale nelle opzioni.</param>
+/// <param name="ValueAfterTax">Il valore totale meno le tasse stimate; null senza regola fiscale.</param>
+/// <param name="UnrealizedPnLAfterTax">Il guadagno sulla carta dei lotti a costo noto, meno le loro tasse; null senza regola fiscale.</param>
 /// <param name="GoldFineWeightGrams">L'oro puro posseduto, in grammi.</param>
 /// <param name="SilverFineWeightGrams">L'argento puro posseduto, in grammi.</param>
-/// <param name="Positions">Le posizioni aperte.</param>
+/// <param name="Positions">Le posizioni aperte, una per prodotto.</param>
+/// <param name="Lots">I lotti aperti, uno per acquisto (vuoto con la media ponderata).</param>
+/// <param name="ByMetal">Il riepilogo per metallo.</param>
+/// <param name="CashFlow">Acquisti e vendite dall'inizio.</param>
 /// <param name="AllocationByMetal">La ripartizione del valore tra oro e argento.</param>
 /// <param name="AllocationByForm">La ripartizione del valore tra monete e lingotti.</param>
 /// <param name="Performance">I rendimenti; assenti se non c'è storico o mancano i prezzi per ricostruirlo.</param>
@@ -40,9 +46,15 @@ public sealed record WalletSummary(
     MoneyResult RealizedPnL,
     MoneyResult UnknownCostProceeds,
     MoneyResult TotalPnL,
+    MoneyResult? EstimatedTax,
+    MoneyResult? ValueAfterTax,
+    MoneyResult? UnrealizedPnLAfterTax,
     decimal GoldFineWeightGrams,
     decimal SilverFineWeightGrams,
     IReadOnlyList<PositionValuation> Positions,
+    IReadOnlyList<LotValuation> Lots,
+    IReadOnlyList<MetalSummary> ByMetal,
+    CashFlowSummary CashFlow,
     IReadOnlyList<AllocationShare> AllocationByMetal,
     IReadOnlyList<AllocationShare> AllocationByForm,
     PerformanceSummary? Performance,

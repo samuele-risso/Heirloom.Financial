@@ -29,6 +29,7 @@ public sealed record Lot
 {
     private readonly string? _id;
     private readonly string? _matchedLotId;
+    private readonly bool _hasDocumentedCost;
 
     /// <summary>
     /// Il prodotto acquistato o venduto.
@@ -102,6 +103,26 @@ public sealed record Lot
             }
 
             _matchedLotId = id;
+        }
+    }
+
+    /// <summary>
+    /// Solo per gli acquisti: se il costo è documentato (in Heirloom: c'è la fattura).
+    /// Serve alla stima delle tasse, che senza documentazione si calcolano sull'intero valore.
+    /// Predefinito: <c>false</c>, cioè la stima più prudente.
+    /// </summary>
+    /// <exception cref="ArgumentException">Il lotto è una vendita.</exception>
+    public bool HasDocumentedCost
+    {
+        get => _hasDocumentedCost;
+        init
+        {
+            if (value && Side != LotSide.Buy)
+            {
+                throw new ArgumentException("Solo un acquisto può avere il costo documentato.", nameof(HasDocumentedCost));
+            }
+
+            _hasDocumentedCost = value;
         }
     }
 

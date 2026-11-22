@@ -1,15 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+		<!-- Solo .NET 10 (HA-044): Heirloom è migrato, net9.0 non serve più -->
+		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>Heirloom.Financial</RootNamespace>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-		<!-- Versione della libreria: segue il CHANGELOG (versionamento semantico) -->
-		<Version>1.0.0</Version>
+		<!-- Versione predefinita per i build locali; nella pipeline di rilascio arriva dal tag vX.Y.Z -->
+		<Version>1.2.0</Version>
+	</PropertyGroup>
+
+	<!-- Informazioni del pacchetto NuGet -->
+	<PropertyGroup>
+		<PackageId>Heirloom.Financial</PackageId>
 		<Authors>Samuele Risso</Authors>
 		<Description>Calcoli finanziari per portafogli di metalli preziosi: valutazione, costo di carico, guadagni, rendimenti e rischio.</Description>
+		<PackageTags>gold;silver;precious-metals;portfolio;finance</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/samuele-risso/Heirloom.Financial</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageProjectUrl>https://github.com/samuele-risso/Heirloom.Financial</PackageProjectUrl>
+		<!-- Simboli di debug dentro la DLL: in Heirloom si può entrare nel codice della libreria durante il debug -->
+		<DebugType>embedded</DebugType>
 	</PropertyGroup>
+
+	<!-- Nelle pipeline il build è deterministico (stesso codice, stessa DLL) -->
+	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<!-- Permette ai test di usare le classi internal (es. Internal/Rounding) -->

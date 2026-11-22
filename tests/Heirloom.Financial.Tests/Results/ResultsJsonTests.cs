@@ -46,7 +46,8 @@ public class ResultsJsonTests
             "currency", "valuationDate", "costBasisMethod", "totalValue", "knownCostValue", "unknownCostValue",
             "totalCostBasis", "unrealizedPnL", "unrealizedPercent", "realizedPnL", "unknownCostProceeds", "totalPnL",
             "goldFineWeightGrams", "silverFineWeightGrams", "positions", "allocationByMetal", "allocationByForm",
-            "performance", "risk", "notes",
+            "performance", "risk", "notes", "estimatedTax", "valueAfterTax", "unrealizedPnLAfterTax",
+            "lots", "byMetal", "cashFlow",
         })
         {
             Assert.True(root.TryGetProperty(name, out _), $"Manca il campo '{name}'.");

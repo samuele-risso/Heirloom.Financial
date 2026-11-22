@@ -1,7 +1,7 @@
-# Pipeline di integrazione continua di Heirloom.Financial (HA-004).
+# Pipeline di integrazione continua di Heirloom.Financial (HA-004, soglia di copertura HA-040).
 # A ogni push e pull request verso main o develop:
 # installa .NET 9 e 10, compila, esegue i test su entrambe le versioni,
-# misura la copertura e pubblica il riepilogo nella pagina della pipeline.
+# misura la copertura, pubblica il riepilogo e fallisce se la copertura delle righe è sotto il 90%.
 
 name: CI
 
@@ -27,6 +27,7 @@ jobs:
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
+      MIN_LINE_COVERAGE: 90
 
     steps:
       - name: Scarica il codice
@@ -61,8 +62,18 @@ jobs:
           reportgenerator \
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"CoverageReport" \
-            -reporttypes:"Html;MarkdownSummaryGithub"
+            -assemblyfilters:"+Heirloom.Financial" \
+            -reporttypes:"Html;MarkdownSummaryGithub;JsonSummary"
           cat CoverageReport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Controlla la copertura minima
+        run: |
+          coverage=$(jq '.summary.linecoverage' CoverageReport/Summary.json)
+          echo "Copertura delle righe: ${coverage}% (minimo ${MIN_LINE_COVERAGE}%)"
+          if awk -v c="$coverage" -v m="$MIN_LINE_COVERAGE" 'BEGIN { exit !(c < m) }'; then
+            echo "::error::Copertura delle righe ${coverage}% sotto il minimo del ${MIN_LINE_COVERAGE}%."
+            exit 1
+          fi
 
       - name: Salva risultati dei test e report di copertura
         if: always()

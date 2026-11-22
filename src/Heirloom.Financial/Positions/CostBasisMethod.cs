@@ -19,4 +19,11 @@ public enum CostBasisMethod
     /// FIFO (first in, first out): escono per primi i pezzi comprati per primi.
     /// </summary>
     Fifo = 2,
+
+    /// <summary>
+    /// Lotto specifico: ogni vendita indica da quale acquisto escono i pezzi
+    /// (<c>Lot.MatchedLotId</c> uguale all'<c>Lot.Id</c> dell'acquisto).
+    /// È il metodo che segue le fatture una per una: utile quando il fisco guarda il singolo acquisto.
+    /// </summary>
+    SpecificLot = 3,
 }

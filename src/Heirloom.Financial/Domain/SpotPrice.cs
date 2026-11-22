@@ -1,4 +1,6 @@
-﻿namespace Heirloom.Financial.Domain;
+﻿using Heirloom.Financial.Validation;
+
+namespace Heirloom.Financial.Domain;
 
 /// <summary>
 /// Il prezzo di mercato (spot) di un metallo in un giorno, per oncia troy.
@@ -44,18 +46,8 @@ public sealed record SpotPrice
     /// <exception cref="ArgumentOutOfRangeException">Metallo non definito o prezzo non positivo.</exception>
     public SpotPrice(Metal metal, Money pricePerTroyOunce, DateOnly date)
     {
-        if (!Enum.IsDefined(metal))
-        {
-            throw new ArgumentOutOfRangeException(nameof(metal), metal, "Metallo non supportato.");
-        }
-
-        if (pricePerTroyOunce.IsNegative || pricePerTroyOunce.IsZero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(pricePerTroyOunce), pricePerTroyOunce, "Il prezzo spot deve essere maggiore di zero.");
-        }
-
-        Metal = metal;
-        PricePerTroyOunce = pricePerTroyOunce;
+        Metal = DomainGuards.Defined(metal);
+        PricePerTroyOunce = DomainGuards.Positive(pricePerTroyOunce);
         Date = date;
     }
 }

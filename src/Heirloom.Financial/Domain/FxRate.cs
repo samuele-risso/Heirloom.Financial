@@ -1,4 +1,6 @@
-﻿namespace Heirloom.Financial.Domain;
+﻿using Heirloom.Financial.Validation;
+
+namespace Heirloom.Financial.Domain;
 
 /// <summary>
 /// Un tasso di cambio tra due valute in un giorno.
@@ -49,15 +51,8 @@ public sealed record FxRate
     /// <exception cref="ArgumentException">Base e quotata sono la stessa valuta.</exception>
     public FxRate(Currency baseCurrency, Currency quoteCurrency, decimal rate, DateOnly date)
     {
-        if (!Enum.IsDefined(baseCurrency))
-        {
-            throw new ArgumentOutOfRangeException(nameof(baseCurrency), baseCurrency, "Valuta non supportata.");
-        }
-
-        if (!Enum.IsDefined(quoteCurrency))
-        {
-            throw new ArgumentOutOfRangeException(nameof(quoteCurrency), quoteCurrency, "Valuta non supportata.");
-        }
+        DomainGuards.Defined(baseCurrency);
+        DomainGuards.Defined(quoteCurrency);
 
         if (baseCurrency == quoteCurrency)
         {
@@ -66,14 +61,9 @@ public sealed record FxRate
                 nameof(quoteCurrency));
         }
 
-        if (rate <= 0m)
-        {
-            throw new ArgumentOutOfRangeException(nameof(rate), rate, "Il cambio deve essere maggiore di zero.");
-        }
-
         Base = baseCurrency;
         Quote = quoteCurrency;
-        Rate = rate;
+        Rate = DomainGuards.Positive(rate);
         Date = date;
     }
 

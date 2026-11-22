@@ -1,4 +1,6 @@
-﻿namespace Heirloom.Financial.Domain;
+﻿using Heirloom.Financial.Validation;
+
+namespace Heirloom.Financial.Domain;
 
 /// <summary>
 /// Un prodotto in metallo prezioso, come compare nel catalogo
@@ -64,30 +66,10 @@ public sealed record MetalProduct
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        if (!Enum.IsDefined(metal))
-        {
-            throw new ArgumentOutOfRangeException(nameof(metal), metal, "Metallo non supportato.");
-        }
-
-        if (!Enum.IsDefined(form))
-        {
-            throw new ArgumentOutOfRangeException(nameof(form), form, "Forma del prodotto non supportata.");
-        }
-
-        if (grossWeight == Weight.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(grossWeight), grossWeight, "Il peso lordo deve essere maggiore di zero.");
-        }
-
-        if (fineness <= 0m || fineness > 1m)
-        {
-            throw new ArgumentOutOfRangeException(nameof(fineness), fineness, "Il titolo deve essere maggiore di 0 e al massimo 1 (es. 0,9999).");
-        }
-
         Name = name.Trim();
-        Metal = metal;
-        Form = form;
-        GrossWeight = grossWeight;
-        Fineness = fineness;
+        Metal = DomainGuards.Defined(metal);
+        Form = DomainGuards.Defined(form);
+        GrossWeight = DomainGuards.Positive(grossWeight);
+        Fineness = DomainGuards.Fineness(fineness);
     }
 }

@@ -1,0 +1,76 @@
+# Pipeline di rilascio di Heirloom.Financial.
+# Parte quando si pubblica un tag vX.Y.Z (es. v1.1.0): compila, esegue i test,
+# crea il pacchetto NuGet con quella versione e lo pubblica su GitHub Packages.
+# Heirloom lo installa con: dotnet add package Heirloom.Financial --version X.Y.Z
+
+name: Release
+
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+permissions:
+  contents: read
+  packages: write   # serve per pubblicare su GitHub Packages
+
+jobs:
+  publish:
+    name: Pubblica il pacchetto
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - name: Scarica il codice
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # serve la storia completa per controllare che il tag sia su main
+
+      - name: Installa .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Ricava la versione dal tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "Versione da pubblicare: $version"
+
+      - name: Controlla che il tag sia su main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Il tag $GITHUB_REF_NAME non è su main: si pubblica solo ciò che è stato rilasciato."
+            exit 1
+          fi
+
+      - name: Ripristina, compila e testa
+        run: |
+          dotnet restore
+          dotnet build --configuration Release --no-restore -p:Version="$VERSION"
+          dotnet test --configuration Release --no-build
+
+      - name: Crea il pacchetto
+        run: >
+          dotnet pack src/Heirloom.Financial/Heirloom.Financial.csproj
+          --configuration Release
+          --no-build
+          -p:Version="$VERSION"
+          --output ./packages
+
+      - name: Pubblica su GitHub Packages
+        run: >
+          dotnet nuget push "./packages/*.nupkg"
+          --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          --api-key "${{ secrets.GITHUB_TOKEN }}"
+          --skip-duplicate
+
+      - name: Salva il pacchetto tra gli artefatti
+        uses: actions/upload-artifact@v6
+        with:
+          name: pacchetto-${{ env.VERSION }}
+          path: ./packages/*.nupkg
+          retention-days: 30

@@ -4,6 +4,19 @@ Tutte le modifiche rilevanti di Heirloom.Financial. Il formato segue
 [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e le versioni seguono il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [1.1.0] - 2026-11-22
+
+Prima versione pubblicata come pacchetto NuGet.
+
+### Modificato
+- Solo .NET 10: rimosso `net9.0` ora che Heirloom è migrato (HA-044).
+- `Weight.ToString()` usa sempre il punto decimale, come `Money` e `FxRate`, indipendentemente dalla lingua del sistema.
+
+### Aggiunto
+- Pacchetto NuGet `Heirloom.Financial` con README, documentazione XML e simboli di debug inclusi.
+- Pipeline `Release`: a ogni tag `vX.Y.Z` su `main` compila, testa e pubblica su GitHub Packages.
+- Test sui casi al confine emersi dal mutation testing (punteggio Stryker 81%).
+
 ## [1.0.0] - 2026-11-22
 
 Prima versione stabile, pronta per l'integrazione in Heirloom.
@@ -35,11 +48,12 @@ Prima versione stabile, pronta per l'integrazione in Heirloom.
 - Volatilità annualizzata, drawdown, Sharpe; rapporto oro/argento, SMA ed EMA.
 
 ### Risultati
-- `PortfolioAnalyzer`: un'unica chiamata che produce un `PortfolioSummary` arrotondato
+- `WalletAnalyzer`: un'unica chiamata che produce un `WalletSummary` arrotondato
   (importi a 2 decimali, pesi e percentuali a 4) e serializzabile in JSON con enum e valute come stringhe.
 
 ### Qualità
 - Test unitari, property test con FsCheck, casi di riferimento verificati con Excel e Python, casi estremi.
 - CI su .NET 9 e .NET 10 con copertura minima del 90% delle righe; configurazione di Stryker.NET.
 
+[1.1.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.1.0
 [1.0.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.0.0

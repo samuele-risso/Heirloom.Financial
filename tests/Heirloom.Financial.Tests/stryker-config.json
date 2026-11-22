@@ -1,0 +1,13 @@
+{
+  "stryker-config": {
+    "project": "Heirloom.Financial.csproj",
+    "target-framework": "net10.0",
+    "reporters": [ "html", "progress", "cleartext" ],
+    "ignore-mutations": [ "string" ],
+    "thresholds": {
+      "high": 85,
+      "low": 70,
+      "break": 60
+    }
+  }
+}

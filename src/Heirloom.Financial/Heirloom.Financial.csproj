@@ -1,14 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
-    <RootNamespace>Heirloom.Financial</RootNamespace>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+		<RootNamespace>Heirloom.Financial</RootNamespace>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-  <ItemGroup>
-    <!-- Permette ai test di usare le classi internal (es. Internal/Rounding) -->
-    <InternalsVisibleTo Include="Heirloom.Financial.Tests" />
-  </ItemGroup>
+		<!-- Versione della libreria: segue il CHANGELOG (versionamento semantico) -->
+		<Version>1.0.0</Version>
+		<Authors>Samuele Risso</Authors>
+		<Description>Calcoli finanziari per portafogli di metalli preziosi: valutazione, costo di carico, guadagni, rendimenti e rischio.</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Permette ai test di usare le classi internal (es. Internal/Rounding) -->
+		<InternalsVisibleTo Include="Heirloom.Financial.Tests" />
+	</ItemGroup>
 
 </Project>

@@ -1,4 +1,6 @@
-﻿namespace Heirloom.Financial.Domain;
+﻿using Heirloom.Financial.Constants;
+
+namespace Heirloom.Financial.Domain;
 
 /// <summary>
 /// Un peso, salvato sempre in grammi, con la conversione in once troy.
@@ -15,9 +17,9 @@ public readonly record struct Weight : IComparable<Weight>
     /// Grammi contenuti in un'oncia troy, l'unità con cui sono quotati oro e argento.
     /// </summary>
     /// <remarks>
-    /// Da non confondere con l'oncia "avoirdupois" (28,35 g) usata per altri beni.
+    /// Scorciatoia per <see cref="UnitConstants.GramsPerTroyOunce"/>, dove il valore è definito.
     /// </remarks>
-    public const decimal GramsPerTroyOunce = 31.1034768m;
+    public const decimal GramsPerTroyOunce = UnitConstants.GramsPerTroyOunce;
 
     /// <summary>
     /// Il peso zero. Coincide con <c>default(Weight)</c>.
@@ -56,6 +58,14 @@ public readonly record struct Weight : IComparable<Weight>
     /// <returns>Il peso corrispondente.</returns>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="grams"/> è negativo.</exception>
     public static Weight FromGrams(decimal grams) => new(grams);
+
+    /// <summary>
+    /// Crea un peso a partire dai chilogrammi.
+    /// </summary>
+    /// <param name="kilograms">Il peso in chilogrammi; non può essere negativo.</param>
+    /// <returns>Il peso corrispondente, salvato in grammi.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="kilograms"/> è negativo.</exception>
+    public static Weight FromKilograms(decimal kilograms) => new(kilograms * UnitConstants.GramsPerKilogram);
 
     /// <summary>
     /// Crea un peso a partire dalle once troy.

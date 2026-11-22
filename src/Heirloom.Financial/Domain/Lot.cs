@@ -1,4 +1,6 @@
-﻿namespace Heirloom.Financial.Domain;
+﻿using Heirloom.Financial.Validation;
+
+namespace Heirloom.Financial.Domain;
 
 /// <summary>
 /// Un'operazione dell'utente su un prodotto: un acquisto o una vendita, in una data.
@@ -92,39 +94,13 @@ public sealed record Lot
     {
         ArgumentNullException.ThrowIfNull(product);
 
-        if (quantity <= 0m)
-        {
-            throw new ArgumentOutOfRangeException(nameof(quantity), quantity, "La quantità deve essere maggiore di zero.");
-        }
-
-        if (unitPrice.IsNegative)
-        {
-            throw new ArgumentOutOfRangeException(nameof(unitPrice), unitPrice, "Il prezzo non può essere negativo.");
-        }
-
-        if (fees.IsNegative)
-        {
-            throw new ArgumentOutOfRangeException(nameof(fees), fees, "I costi accessori non possono essere negativi.");
-        }
-
-        if (fees.Currency != unitPrice.Currency)
-        {
-            throw new ArgumentException(
-                $"Prezzo e costi devono essere nella stessa valuta: {unitPrice.Currency.ToIsoCode()} e {fees.Currency.ToIsoCode()}.",
-                nameof(fees));
-        }
-
-        if (!Enum.IsDefined(side))
-        {
-            throw new ArgumentOutOfRangeException(nameof(side), side, "Verso dell'operazione non supportato.");
-        }
-
         Product = product;
-        Quantity = quantity;
-        UnitPrice = unitPrice;
-        Fees = fees;
+        Quantity = DomainGuards.Positive(quantity);
+        UnitPrice = DomainGuards.NonNegative(unitPrice);
+        DomainGuards.NonNegative(fees);
+        Fees = DomainGuards.SameCurrency(unitPrice, fees);
         Date = date;
-        Side = side;
+        Side = DomainGuards.Defined(side);
     }
 
     /// <summary>

@@ -15,7 +15,7 @@ La libreria è pubblicata come pacchetto NuGet privato su GitHub Packages.
    d'ambiente `GITHUB_PACKAGES_TOKEN`.
 2. Nel progetto che la usa, aggiungi un `nuget.config` con la sorgente
    `https://nuget.pkg.github.com/samuele-risso/index.json` e le credenziali prese da quella variabile.
-3. `dotnet add package Heirloom.Financial --version 1.1.0`
+3. `dotnet add package Heirloom.Financial --version 1.2.0`
 
 ## Uso in una riga
 
@@ -28,12 +28,14 @@ var summary = WalletAnalyzer.Analyze(lots, spots, new WalletAnalysisOptions
     CostBasisMethod = CostBasisMethod.SpecificLot,
     AnnualizationBasis = AnnualizationBasis.CalendarDays365,
     RiskFreeRate = 0.025m,   // facoltativo: senza, lo Sharpe è assente
+    TaxPolicy = ItalianTaxPolicy.Standard,  // facoltativo: senza, niente stima delle tasse
 }, rates);                   // facoltativo: serve se lotti o spot sono in un'altra valuta
 
 return Results.Ok(summary);  // JSON pronto per il frontend
 ```
 
-`WalletSummary` contiene totali, posizioni, ripartizione per metallo e forma, rendimenti (TWR, XIRR,
+`WalletSummary` contiene totali, posizioni per prodotto, lotti per acquisto, riepilogo per metallo,
+flusso di cassa, tasse stimate, ripartizione per metallo e forma, rendimenti (TWR, XIRR,
 storico giornaliero) e rischio (volatilità, drawdown, Sharpe). Tutti gli importi sono già arrotondati a
 2 decimali con la loro valuta, pesi e percentuali a 4. Se mancano i prezzi storici, il riepilogo arriva
 comunque, senza rendimenti, con il motivo in `Notes`.
@@ -47,6 +49,7 @@ comunque, senza rendimenti, con il motivo in `Notes`.
 | Vendita | `Lot.Sell(...)` o `Lot.SellForTotal(...)` |
 | Pezzi ereditati o regalati, costo sconosciuto | `Lot.BuyWithUnknownCost(prodotto, quantità, data, valuta)` |
 | Vendita da un acquisto preciso | `vendita with { MatchedLotId = acquisto.Id }` |
+| Acquisto con fattura | `acquisto with { HasDocumentedCost = true }` |
 
 I prodotti si creano da peso lordo e titolo (`new MetalProduct(...)`) oppure da peso lordo e peso fino,
 come nel catalogo di Heirloom (`MetalProduct.FromFineWeight(...)`).
@@ -74,6 +77,7 @@ src/Heirloom.Financial/            la libreria (net10.0)
   Allocation/    ripartizione per metallo e forma
   Performance/   rendimenti, TWR, XIRR, scomposizione del cambio, storico giornaliero
   Risk/          volatilità, drawdown, Sharpe
+  Taxation/      stima delle tasse (ITaxPolicy, regola italiana)
   Market/        serie di prezzi, rapporto oro/argento, SMA ed EMA
   Results/       WalletAnalyzer e i record dei risultati per l'API
   Internal/      arrotondamenti e ricerche (non visibili fuori dalla libreria)
@@ -108,7 +112,8 @@ La CI compila e testa su .NET 10 e fallisce se la copertura delle righe scende s
 - Enum con valori espliciti a partire da 1: lo 0 non è mai un valore valido.
 - Le scelte che cambiano i numeri (strategia, metodo di carico, base dei giorni, tasso privo di rischio)
   sono sempre parametri: la libreria non ha valori di mercato scritti nel codice.
-- Le tasse non sono qui: restano in Heirloom.
+- Le regole fiscali stanno solo in `Taxation/` e si scelgono nelle opzioni: un cambio di legge è una nuova versione.
+  La stima è indicativa, non una consulenza fiscale.
 
 ## Versioni e rilasci
 

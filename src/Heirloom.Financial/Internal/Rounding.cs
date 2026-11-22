@@ -46,6 +46,15 @@ internal static class Rounding
     public static Weight Grams(Weight weight) =>
         new(Math.Round(weight.Grams, WeightDecimals, MidpointRounding.AwayFromZero));
 
+    /// <summary>Decimali dei prezzi unitari piccoli (es. euro per grammo d'argento).</summary>
+    public const int UnitPriceDecimals = 4;
+
+    /// <summary>Arrotonda un prezzo unitario a 4 decimali, per eccesso dal 5.</summary>
+    /// <param name="price">Il prezzo.</param>
+    /// <returns>Il prezzo arrotondato.</returns>
+    public static decimal UnitPrice(decimal price) =>
+        Math.Round(price, UnitPriceDecimals, MidpointRounding.AwayFromZero);
+
     /// <summary>Arrotonda una percentuale (frazione) a 4 decimali: 0,123456 → 0,1235.</summary>
     /// <param name="fraction">La percentuale come frazione.</param>
     /// <returns>La percentuale arrotondata.</returns>

@@ -29,4 +29,10 @@ public sealed record CostBasisResult(
     /// L'incasso delle vendite di pezzi a costo sconosciuto, su cui non si può calcolare un guadagno.
     /// </summary>
     public Money UnknownCostProceeds => Sales.Aggregate(Money.Zero(Currency), (sum, s) => sum + s.UnknownCostProceeds);
+
+    /// <summary>
+    /// Gli acquisti di cui restano dei pezzi, in ordine di data. Vuoto con la media ponderata,
+    /// dove gli acquisti si fondono in un'unica posizione.
+    /// </summary>
+    public IReadOnlyList<OpenLot> OpenLots { get; init; } = [];
 }

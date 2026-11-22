@@ -7,7 +7,7 @@
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
 		<!-- Versione predefinita per i build locali; nella pipeline di rilascio arriva dal tag vX.Y.Z -->
-		<Version>1.2.0</Version>
+		<Version>1.4.0</Version>
 	</PropertyGroup>
 
 	<!-- Informazioni del pacchetto NuGet -->

@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti di Heirloom.Financial. Il formato segue
 [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e le versioni seguono il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [1.4.0] - 2026-11-22
+
+### Aggiunto
+- `Market.Candle`: candela di mercato (apertura, massimo, minimo, chiusura con valuta, volume, scambi), con
+  `ConvertTo` (i quattro prezzi con il cambio del giorno della candela) e `ToSpot` (la chiusura come spot del giorno).
+- `Market.CandleAggregator.Aggregate`: unisce più candele in una (es. le orarie di un giorno nella giornaliera).
+
 ## [1.3.0] - 2026-11-22
 
 Lo storico per i grafici si calcola dalla libreria a partire da transazioni e prezzi giornalieri,
@@ -84,6 +91,7 @@ Prima versione stabile, pronta per l'integrazione in Heirloom.
 - Test unitari, property test con FsCheck, casi di riferimento verificati con Excel e Python, casi estremi.
 - CI su .NET 9 e .NET 10 con copertura minima del 90% delle righe; configurazione di Stryker.NET.
 
+[1.4.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.4.0
 [1.3.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.3.0
 [1.2.1]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.2.1
 [1.2.0]: https://github.com/samuele-risso/Heirloom.Financial/releases/tag/v1.2.0

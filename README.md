@@ -7,10 +7,20 @@ Riceve operazioni, prezzi e cambi; restituisce valori, guadagni, rendimenti e ri
 
 ![CI](https://github.com/samuele-risso/Heirloom.Financial/actions/workflows/ci.yml/badge.svg)
 
+## Installazione
+
+La libreria è pubblicata come pacchetto NuGet privato su GitHub Packages.
+
+1. Crea un token GitHub (classic) con il solo permesso `read:packages` e salvalo nella variabile
+   d'ambiente `GITHUB_PACKAGES_TOKEN`.
+2. Nel progetto che la usa, aggiungi un `nuget.config` con la sorgente
+   `https://nuget.pkg.github.com/samuele-risso/index.json` e le credenziali prese da quella variabile.
+3. `dotnet add package Heirloom.Financial --version 1.1.0`
+
 ## Uso in una riga
 
 ```csharp
-var summary = PortfolioAnalyzer.Analyze(lots, spots, new PortfolioAnalysisOptions
+var summary = WalletAnalyzer.Analyze(lots, spots, new WalletAnalysisOptions
 {
     Currency = Currency.EUR,
     ValuationDate = DateOnly.FromDateTime(DateTime.Today),
@@ -23,7 +33,7 @@ var summary = PortfolioAnalyzer.Analyze(lots, spots, new PortfolioAnalysisOption
 return Results.Ok(summary);  // JSON pronto per il frontend
 ```
 
-`PortfolioSummary` contiene totali, posizioni, ripartizione per metallo e forma, rendimenti (TWR, XIRR,
+`WalletSummary` contiene totali, posizioni, ripartizione per metallo e forma, rendimenti (TWR, XIRR,
 storico giornaliero) e rischio (volatilità, drawdown, Sharpe). Tutti gli importi sono già arrotondati a
 2 decimali con la loro valuta, pesi e percentuali a 4. Se mancano i prezzi storici, il riepilogo arriva
 comunque, senza rendimenti, con il motivo in `Notes`.
@@ -54,7 +64,7 @@ segue le fatture una per una.
 ```
 Heirloom.Financial.slnx
 Directory.Build.props              impostazioni comuni (nullable, warning come errori)
-src/Heirloom.Financial/            la libreria (net9.0 e net10.0)
+src/Heirloom.Financial/            la libreria (net10.0)
   Domain/        tipi di base: Metal, Currency, Weight, Money, MetalProduct, Lot, SpotPrice, FxRate, WalletSnapshot
   Constants/     grammi per oncia troy, titoli comuni
   Validation/    controlli sui dati in ingresso
@@ -65,7 +75,7 @@ src/Heirloom.Financial/            la libreria (net9.0 e net10.0)
   Performance/   rendimenti, TWR, XIRR, scomposizione del cambio, storico giornaliero
   Risk/          volatilità, drawdown, Sharpe
   Market/        serie di prezzi, rapporto oro/argento, SMA ed EMA
-  Results/       PortfolioAnalyzer e i record dei risultati per l'API
+  Results/       WalletAnalyzer e i record dei risultati per l'API
   Internal/      arrotondamenti e ricerche (non visibili fuori dalla libreria)
 tests/Heirloom.Financial.Tests/    test xUnit, property test FsCheck, casi di riferimento, casi estremi
 ```
@@ -86,7 +96,7 @@ dotnet tool restore
 dotnet stryker
 ```
 
-La CI compila e testa su .NET 9 e .NET 10 e fallisce se la copertura delle righe scende sotto il 90%.
+La CI compila e testa su .NET 10 e fallisce se la copertura delle righe scende sotto il 90%.
 
 ## Convenzioni
 
@@ -100,7 +110,13 @@ La CI compila e testa su .NET 9 e .NET 10 e fallisce se la copertura delle righe
   sono sempre parametri: la libreria non ha valori di mercato scritti nel codice.
 - Le tasse non sono qui: restano in Heirloom.
 
-## Versioni
+## Versioni e rilasci
 
 Le modifiche sono in [CHANGELOG.md](CHANGELOG.md). Si lavora su branch `feature/...` da `develop`;
-`main` riceve solo i rilasci, con un tag `vX.Y.Z`.
+`main` riceve solo i rilasci. Per pubblicare una versione:
+
+1. aggiorna `CHANGELOG.md` e `<Version>` nel `.csproj`;
+2. porta `develop` su `main` con una pull request;
+3. crea e pubblica il tag su `main`: `git tag -a vX.Y.Z -m "..."` e `git push origin vX.Y.Z`.
+
+La pipeline `Release` compila, testa e pubblica il pacchetto con la versione del tag.

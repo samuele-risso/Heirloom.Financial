@@ -1,6 +1,6 @@
 # Pipeline di integrazione continua di Heirloom.Financial (HA-004, soglia di copertura HA-040).
 # A ogni push e pull request verso main o develop:
-# installa .NET 9 e 10, compila, esegue i test su entrambe le versioni,
+# installa .NET 10, compila, esegue i test,
 # misura la copertura, pubblica il riepilogo e fallisce se la copertura delle righe è sotto il 90%.
 
 name: CI
@@ -33,12 +33,10 @@ jobs:
       - name: Scarica il codice
         uses: actions/checkout@v6
 
-      - name: Installa .NET 9 e .NET 10
+      - name: Installa .NET 10
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            9.0.x
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Ripristina i pacchetti NuGet
         run: dotnet restore

@@ -49,7 +49,7 @@ public class CostBasisProperties
             return true; // venduto tutto: non c'è più un prezzo medio
         }
 
-        var difference = after.Positions[0].AverageCost - before.Positions[0].AverageCost;
+        var difference = after.Positions[0].AverageCost!.Value - before.Positions[0].AverageCost!.Value;
         return Math.Abs(difference.Amount) < Tolerance;
     }
 

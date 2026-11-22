@@ -13,12 +13,12 @@ namespace Heirloom.Financial.Exchange;
 public static class LotCurrencyConverter
 {
     /// <summary>
-    /// Converte un lotto: prezzo unitario e costi, con il cambio del giorno dell'operazione.
+    /// Converte un lotto: prezzo, controvalore e costi, con il cambio del giorno dell'operazione.
     /// </summary>
     /// <param name="lot">Il lotto.</param>
     /// <param name="target">La valuta di arrivo.</param>
     /// <param name="rates">La serie dei cambi tra la valuta del lotto e quella di arrivo.</param>
-    /// <returns>Un nuovo lotto, identico ma con gli importi nella valuta di arrivo.</returns>
+    /// <returns>Un nuovo lotto, identico (anche id e costo sconosciuto) ma con gli importi nella valuta di arrivo.</returns>
     /// <exception cref="ArgumentNullException">Un argomento è null.</exception>
     /// <exception cref="InvalidOperationException">Nessun cambio disponibile per la data del lotto.</exception>
     public static Lot Convert(Lot lot, Currency target, FxRateSeries rates)
@@ -31,13 +31,7 @@ public static class LotCurrencyConverter
             return lot;
         }
 
-        return new Lot(
-            lot.Product,
-            lot.Quantity,
-            rates.Convert(lot.UnitPrice, target, lot.Date),
-            rates.Convert(lot.Fees, target, lot.Date),
-            lot.Date,
-            lot.Side);
+        return lot.WithAmounts(amount => rates.Convert(amount, target, lot.Date));
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 ﻿using Heirloom.Financial.Domain;
 using Heirloom.Financial.Exchange;
+using Heirloom.Financial.Internal;
 using Heirloom.Financial.Validation;
 using Heirloom.Financial.Valuation;
 
@@ -36,7 +37,7 @@ public static class SnapshotBuilder
     /// <param name="rates">I cambi, se gli spot sono in una valuta diversa da <paramref name="currency"/>.</param>
     /// <returns>Uno snapshot per ogni giorno del periodo.</returns>
     /// <exception cref="ArgumentException">Lotti in un'altra valuta, date invertite, o vendite superiori al posseduto.</exception>
-    /// <exception cref="InvalidOperationException">In un giorno con metallo posseduto manca uno spot precedente, o manca il cambio.</exception>
+    /// <exception cref="InvalidOperationException">In un giorno con metallo posseduto (o nel giorno di arrivo di un lotto a costo sconosciuto) manca uno spot precedente, o manca il cambio.</exception>
     public static IReadOnlyList<WalletSnapshot> Build(
         IEnumerable<Lot> lots,
         IEnumerable<SpotPrice> spots,
@@ -67,9 +68,7 @@ public static class SnapshotBuilder
                 nameof(lots));
         }
 
-        var spotsByMetal = spots
-            .GroupBy(s => s.Metal)
-            .ToDictionary(g => g.Key, g => g.OrderBy(s => s.Date).ToArray());
+        var spotLookup = new SpotLookup(spots);
 
         var holdings = new Dictionary<MetalProduct, decimal>();
         var invested = Money.Zero(currency);
@@ -84,7 +83,9 @@ public static class SnapshotBuilder
                 var lot = orderedLots[nextLot++];
                 holdings.TryGetValue(lot.Product, out var quantity);
                 holdings[lot.Product] = lot.Side == LotSide.Buy ? quantity + lot.Quantity : quantity - lot.Quantity;
-                invested -= lot.CashFlow;
+                invested += lot.HasKnownCost
+                    ? -lot.CashFlow
+                    : spotLookup.UnitValue(lot.Product, lot.Date, strategy, currency, rates) * lot.Quantity;
             }
 
             var value = Money.Zero(currency);
@@ -98,19 +99,7 @@ public static class SnapshotBuilder
                     continue;
                 }
 
-                var spot = SpotOn(spotsByMetal, product.Metal, day);
-                var unitValue = strategy.UnitValue(product, spot);
-
-                if (unitValue.Currency != currency)
-                {
-                    if (rates is null)
-                    {
-                        throw new InvalidOperationException(
-                            $"Lo spot di {product.Metal} è in {unitValue.Currency.ToIsoCode()}: serve una serie di cambi verso {currency.ToIsoCode()}.");
-                    }
-
-                    unitValue = rates.Convert(unitValue, currency, day);
-                }
+                var unitValue = spotLookup.UnitValue(product, day, strategy, currency, rates);
 
                 value += unitValue * quantity;
 
@@ -129,36 +118,5 @@ public static class SnapshotBuilder
         }
 
         return snapshots;
-    }
-
-    /// <summary>L'ultimo spot del metallo disponibile in quel giorno (ricerca binaria).</summary>
-    private static SpotPrice SpotOn(Dictionary<Metal, SpotPrice[]> spotsByMetal, Metal metal, DateOnly day)
-    {
-        if (spotsByMetal.TryGetValue(metal, out var series))
-        {
-            int low = 0, high = series.Length - 1, found = -1;
-
-            while (low <= high)
-            {
-                var middle = (low + high) / 2;
-
-                if (series[middle].Date <= day)
-                {
-                    found = middle;
-                    low = middle + 1;
-                }
-                else
-                {
-                    high = middle - 1;
-                }
-            }
-
-            if (found >= 0)
-            {
-                return series[found];
-            }
-        }
-
-        throw new InvalidOperationException($"Nessun prezzo spot di {metal} disponibile per il {day:yyyy-MM-dd}.");
     }
 }

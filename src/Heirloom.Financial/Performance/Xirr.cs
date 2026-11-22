@@ -1,4 +1,7 @@
 ﻿using Heirloom.Financial.Domain;
+using Heirloom.Financial.Exchange;
+using Heirloom.Financial.Internal;
+using Heirloom.Financial.Valuation;
 
 namespace Heirloom.Financial.Performance;
 
@@ -87,15 +90,64 @@ public static class Xirr
     /// <summary>
     /// Ricava i flussi di cassa dalle operazioni e aggiunge il valore attuale come ultimo flusso positivo.
     /// </summary>
-    /// <param name="lots">Le operazioni, tutte nella valuta di <paramref name="currentValue"/>.</param>
+    /// <param name="lots">Le operazioni, tutte nella valuta di <paramref name="currentValue"/>, con costo noto.</param>
     /// <param name="currentValue">Il valore attuale del portafoglio.</param>
     /// <param name="valuationDate">La data del valore attuale.</param>
     /// <returns>I flussi, pronti per <see cref="Calculate"/>.</returns>
-    /// <exception cref="ArgumentException">Un lotto è in una valuta diversa dal valore attuale.</exception>
+    /// <exception cref="ArgumentException">
+    /// Un lotto è in una valuta diversa dal valore attuale, oppure ha costo sconosciuto:
+    /// in quel caso usa l'overload con gli spot.
+    /// </exception>
     public static IReadOnlyList<CashFlow> CashFlowsFrom(IEnumerable<Lot> lots, Money currentValue, DateOnly valuationDate)
     {
         ArgumentNullException.ThrowIfNull(lots);
 
+        return BuildFlows(lots, currentValue, valuationDate, lot => throw new ArgumentException(
+            $"'{lot.Product.Name}' del {lot.Date:yyyy-MM-dd} ha costo sconosciuto: " +
+            "usa l'overload di CashFlowsFrom con gli spot, che lo valuta al prezzo di mercato di quel giorno.",
+            nameof(lots)));
+    }
+
+    /// <summary>
+    /// Come l'altro overload, ma accetta anche lotti a costo sconosciuto (eredità, regali):
+    /// entrano come un conferimento al valore di mercato del giorno in cui arrivano.
+    /// </summary>
+    /// <remarks>
+    /// È come se l'utente avesse comprato quei pezzi al prezzo di quel giorno: il rendimento misura
+    /// come sono andati da allora in poi, senza contare come guadagno il loro valore iniziale.
+    /// </remarks>
+    /// <param name="lots">Le operazioni, tutte nella valuta di <paramref name="currentValue"/>.</param>
+    /// <param name="currentValue">Il valore attuale del portafoglio.</param>
+    /// <param name="valuationDate">La data del valore attuale.</param>
+    /// <param name="spots">I prezzi spot storici, per valutare i lotti a costo sconosciuto.</param>
+    /// <param name="strategy">Come valutarli (la stessa usata per <paramref name="currentValue"/>).</param>
+    /// <param name="rates">I cambi, se gli spot sono in un'altra valuta.</param>
+    /// <returns>I flussi, pronti per <see cref="Calculate"/>.</returns>
+    /// <exception cref="ArgumentException">Un lotto è in una valuta diversa dal valore attuale.</exception>
+    /// <exception cref="InvalidOperationException">Manca lo spot (o il cambio) nel giorno di un lotto a costo sconosciuto.</exception>
+    public static IReadOnlyList<CashFlow> CashFlowsFrom(
+        IEnumerable<Lot> lots,
+        Money currentValue,
+        DateOnly valuationDate,
+        IEnumerable<SpotPrice> spots,
+        IValuationStrategy strategy,
+        FxRateSeries? rates = null)
+    {
+        ArgumentNullException.ThrowIfNull(lots);
+        ArgumentNullException.ThrowIfNull(strategy);
+
+        var lookup = new SpotLookup(spots);
+
+        return BuildFlows(lots, currentValue, valuationDate,
+            lot => -(lookup.UnitValue(lot.Product, lot.Date, strategy, currentValue.Currency, rates) * lot.Quantity));
+    }
+
+    private static List<CashFlow> BuildFlows(
+        IEnumerable<Lot> lots,
+        Money currentValue,
+        DateOnly valuationDate,
+        Func<Lot, Money> unknownCostFlow)
+    {
         var flows = new List<CashFlow>();
 
         foreach (var lot in lots)
@@ -107,7 +159,8 @@ public static class Xirr
                     nameof(lots));
             }
 
-            flows.Add(new CashFlow(lot.Date, lot.CashFlow.Amount));
+            var flow = lot.HasKnownCost ? lot.CashFlow : unknownCostFlow(lot);
+            flows.Add(new CashFlow(lot.Date, flow.Amount));
         }
 
         flows.Add(new CashFlow(valuationDate, currentValue.Amount));

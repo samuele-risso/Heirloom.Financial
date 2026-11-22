@@ -6,17 +6,33 @@ namespace Heirloom.Financial.Positions;
 /// <summary>
 /// Il guadagno (o la perdita) di una singola posizione aperta.
 /// </summary>
+/// <remarks>
+/// Se una parte dei pezzi ha costo sconosciuto, il valore viene diviso in proporzione ai pezzi:
+/// il guadagno si calcola solo sulla parte a costo noto, mentre <see cref="Value"/> resta il valore di tutto.
+/// </remarks>
 /// <param name="Position">La posizione, con il suo costo di carico.</param>
-/// <param name="Value">Il valore attuale, secondo la strategia di valutazione scelta.</param>
+/// <param name="Value">Il valore attuale di tutti i pezzi, secondo la strategia di valutazione scelta.</param>
 public sealed record PositionPnL(Position Position, Money Value)
 {
     /// <summary>
-    /// Il guadagno sulla carta: valore attuale meno costo di carico.
+    /// Il valore dei soli pezzi a costo noto.
     /// </summary>
-    public Money UnrealizedPnL => Value - Position.CostBasis;
+    public Money KnownCostValue => Position.HasUnknownCost
+        ? Value * Position.KnownCostQuantity / Position.Quantity
+        : Value;
 
     /// <summary>
-    /// Il guadagno sulla carta in percentuale (frazione) del costo; assente se il costo è zero.
+    /// Il valore dei pezzi a costo sconosciuto (eredità, regali).
+    /// </summary>
+    public Money UnknownCostValue => Value - KnownCostValue;
+
+    /// <summary>
+    /// Il guadagno sulla carta dei pezzi a costo noto: il loro valore meno il loro costo.
+    /// </summary>
+    public Money UnrealizedPnL => KnownCostValue - Position.CostBasis;
+
+    /// <summary>
+    /// Il guadagno sulla carta in percentuale (frazione) del costo; assente se il costo è zero o sconosciuto.
     /// </summary>
     public decimal? UnrealizedPercent =>
         Position.CostBasis.IsZero ? null : UnrealizedPnL / Position.CostBasis;
@@ -27,17 +43,23 @@ public sealed record PositionPnL(Position Position, Money Value)
 /// </summary>
 /// <param name="Currency">La valuta di tutti gli importi.</param>
 /// <param name="Positions">Il guadagno di ogni posizione aperta.</param>
-/// <param name="RealizedPnL">Il guadagno già incassato con le vendite.</param>
+/// <param name="RealizedPnL">Il guadagno già incassato con le vendite (solo sui pezzi a costo noto).</param>
 public sealed record PnLSummary(Currency Currency, IReadOnlyList<PositionPnL> Positions, Money RealizedPnL)
 {
-    /// <summary>Il costo di carico totale delle posizioni aperte.</summary>
+    /// <summary>Il costo di carico totale delle posizioni aperte (solo pezzi a costo noto).</summary>
     public Money TotalCostBasis => Positions.Aggregate(Money.Zero(Currency), (sum, p) => sum + p.Position.CostBasis);
 
-    /// <summary>Il valore attuale totale delle posizioni aperte.</summary>
+    /// <summary>Il valore attuale totale delle posizioni aperte, compresi i pezzi a costo sconosciuto.</summary>
     public Money TotalValue => Positions.Aggregate(Money.Zero(Currency), (sum, p) => sum + p.Value);
 
-    /// <summary>Il guadagno sulla carta totale.</summary>
-    public Money UnrealizedPnL => TotalValue - TotalCostBasis;
+    /// <summary>Il valore dei pezzi a costo noto: è la base su cui si calcola il guadagno.</summary>
+    public Money KnownCostValue => Positions.Aggregate(Money.Zero(Currency), (sum, p) => sum + p.KnownCostValue);
+
+    /// <summary>Il valore dei pezzi a costo sconosciuto.</summary>
+    public Money UnknownCostValue => TotalValue - KnownCostValue;
+
+    /// <summary>Il guadagno sulla carta totale, sui pezzi a costo noto.</summary>
+    public Money UnrealizedPnL => KnownCostValue - TotalCostBasis;
 
     /// <summary>Il guadagno sulla carta in percentuale (frazione) del costo; assente se il costo è zero.</summary>
     public decimal? UnrealizedPercent => TotalCostBasis.IsZero ? null : UnrealizedPnL / TotalCostBasis;

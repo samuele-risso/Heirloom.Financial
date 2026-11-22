@@ -145,5 +145,5 @@ public readonly record struct Weight : IComparable<Weight>
     /// Restituisce il peso in grammi in forma leggibile (es. "100 g").
     /// </summary>
     /// <returns>Il peso seguito dall'unità di misura.</returns>
-    public override string ToString() => $"{Grams} g";
+    public override string ToString() => $"{Grams.ToString(System.Globalization.CultureInfo.InvariantCulture)} g";
 }

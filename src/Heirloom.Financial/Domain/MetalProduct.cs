@@ -50,7 +50,11 @@ public sealed record MetalProduct
     /// Il peso fino: la quantità di metallo puro contenuta (peso lordo × titolo).
     /// È il peso su cui si calcola il valore.
     /// </summary>
-    public Weight FineWeight => GrossWeight * Fineness;
+    /// <remarks>
+    /// Di solito è peso lordo × titolo. Se il prodotto è stato creato con
+    /// <see cref="FromFineWeight"/>, è il peso fino dichiarato, senza arrotondamenti.
+    /// </remarks>
+    public Weight FineWeight { get; }
 
     /// <summary>
     /// Crea un prodotto.
@@ -71,5 +75,47 @@ public sealed record MetalProduct
         Form = DomainGuards.Defined(form);
         GrossWeight = DomainGuards.Positive(grossWeight);
         Fineness = DomainGuards.Fineness(fineness);
+        FineWeight = GrossWeight * Fineness;
+    }
+
+    private MetalProduct(string name, Metal metal, ProductForm form, Weight grossWeight, Weight fineWeight)
+        : this(name, metal, form, grossWeight, FinenessOf(grossWeight, fineWeight))
+    {
+        FineWeight = fineWeight;
+    }
+
+    /// <summary>
+    /// Crea un prodotto a partire dal peso lordo e dal peso fino dichiarati,
+    /// come li riporta un catalogo (es. Krugerrand: 33,93 g lordi, 31,10 g fini).
+    /// </summary>
+    /// <remarks>
+    /// Il titolo viene ricavato (peso fino ÷ peso lordo), ma il peso fino resta
+    /// esattamente quello passato: nessun errore di arrotondamento sul valore.
+    /// </remarks>
+    /// <param name="name">Il nome; non può essere vuoto.</param>
+    /// <param name="metal">Il metallo.</param>
+    /// <param name="form">La forma.</param>
+    /// <param name="grossWeight">Il peso lordo; maggiore di zero.</param>
+    /// <param name="fineWeight">Il peso fino; maggiore di zero e non superiore al peso lordo.</param>
+    /// <returns>Il prodotto.</returns>
+    /// <exception cref="ArgumentException"><paramref name="name"/> è null, vuoto o fatto solo di spazi.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Metallo o forma non definiti, pesi a zero, o peso fino maggiore del lordo.</exception>
+    public static MetalProduct FromFineWeight(string name, Metal metal, ProductForm form, Weight grossWeight, Weight fineWeight)
+        => new(name, metal, form, grossWeight, fineWeight);
+
+    private static decimal FinenessOf(Weight grossWeight, Weight fineWeight)
+    {
+        DomainGuards.Positive(grossWeight);
+        DomainGuards.Positive(fineWeight);
+
+        if (fineWeight > grossWeight)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(fineWeight),
+                fineWeight,
+                $"Il peso fino ({fineWeight}) non può superare il peso lordo ({grossWeight}).");
+        }
+
+        return fineWeight.Grams / grossWeight.Grams;
     }
 }

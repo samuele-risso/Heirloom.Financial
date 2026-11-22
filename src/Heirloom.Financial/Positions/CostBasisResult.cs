@@ -21,7 +21,12 @@ public sealed record CostBasisResult(
     public Money TotalCostBasis => Positions.Aggregate(Money.Zero(Currency), (sum, p) => sum + p.CostBasis);
 
     /// <summary>
-    /// Il guadagno realizzato totale, sommando tutte le vendite.
+    /// Il guadagno realizzato totale, sommando tutte le vendite (solo sui pezzi a costo noto).
     /// </summary>
     public Money RealizedPnL => Sales.Aggregate(Money.Zero(Currency), (sum, s) => sum + s.RealizedPnL);
+
+    /// <summary>
+    /// L'incasso delle vendite di pezzi a costo sconosciuto, su cui non si può calcolare un guadagno.
+    /// </summary>
+    public Money UnknownCostProceeds => Sales.Aggregate(Money.Zero(Currency), (sum, s) => sum + s.UnknownCostProceeds);
 }

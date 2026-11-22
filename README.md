@@ -15,7 +15,7 @@ La libreria è pubblicata come pacchetto NuGet privato su GitHub Packages.
    d'ambiente `GITHUB_PACKAGES_TOKEN`.
 2. Nel progetto che la usa, aggiungi un `nuget.config` con la sorgente
    `https://nuget.pkg.github.com/samuele-risso/index.json` e le credenziali prese da quella variabile.
-3. `dotnet add package Heirloom.Financial --version 1.2.0`
+3. `dotnet add package Heirloom.Financial --version 1.3.0`
 
 ## Uso in una riga
 
@@ -39,6 +39,10 @@ flusso di cassa, tasse stimate, ripartizione per metallo e forma, rendimenti (TW
 storico giornaliero) e rischio (volatilità, drawdown, Sharpe). Tutti gli importi sono già arrotondati a
 2 decimali con la loro valuta, pesi e percentuali a 4. Se mancano i prezzi storici, il riepilogo arriva
 comunque, senza rendimenti, con il motivo in `Notes`.
+
+Con `IncludeHistory` (predefinito) il riepilogo contiene anche lo storico giorno per giorno dal primo acquisto:
+valore, capitale investito, indice TWR, costo di carico, guadagno e il dettaglio per metallo. Basta passare gli spot
+giornalieri: non servono fotografie salvate.
 
 ## Come creare i lotti
 
@@ -120,8 +124,9 @@ La CI compila e testa su .NET 10 e fallisce se la copertura delle righe scende s
 Le modifiche sono in [CHANGELOG.md](CHANGELOG.md). Si lavora su branch `feature/...` da `develop`;
 `main` riceve solo i rilasci. Per pubblicare una versione:
 
-1. aggiorna `CHANGELOG.md` e `<Version>` nel `.csproj`;
+1. aggiorna `CHANGELOG.md` (con una sezione `## [X.Y.Z]`) e `<Version>` nel `.csproj`;
 2. porta `develop` su `main` con una pull request;
 3. crea e pubblica il tag su `main`: `git tag -a vX.Y.Z -m "..."` e `git push origin vX.Y.Z`.
 
-La pipeline `Release` compila, testa e pubblica il pacchetto con la versione del tag.
+La pipeline `Release` controlla che il `CHANGELOG.md` abbia la sezione della versione, poi compila, testa e
+pubblica il pacchetto con la versione del tag. Se manca la sezione, il tag è stato creato su un `main` non aggiornato.

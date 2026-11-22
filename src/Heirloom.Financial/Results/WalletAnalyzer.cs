@@ -316,7 +316,7 @@ public static class WalletAnalyzer
             notes.Add($"Rendimento personale (XIRR) non calcolabile: {xirr.FailureReason}");
         }
 
-        var history = options.IncludeHistory ? History(snapshots) : [];
+        var history = options.IncludeHistory ? History(snapshots, lots, new SpotLookup(spots), options, rates) : [];
 
         var performance = new PerformanceSummary(
             from,
@@ -330,17 +330,64 @@ public static class WalletAnalyzer
         return (performance, Risk(snapshots, annualized, options));
     }
 
-    private static List<HistoryPoint> History(IReadOnlyList<WalletSnapshot> snapshots)
+    private static List<HistoryPoint> History(
+        IReadOnlyList<WalletSnapshot> snapshots,
+        IReadOnlyList<Lot> lots,
+        SpotLookup lookup,
+        WalletAnalysisOptions options,
+        FxRateSeries? rates)
     {
         var index = TimeWeightedReturn.Index(snapshots).ToDictionary(p => p.Date, p => p.Value);
+        var ordered = lots.OrderBy(l => l.Date).ToList();
+        var points = new List<HistoryPoint>(snapshots.Count);
 
-        return snapshots
-            .Select(s => new HistoryPoint(
-                s.Date,
-                Rounding.Amount(s.Value.Amount),
-                Rounding.Amount(s.InvestedCapital.Amount),
-                index.TryGetValue(s.Date, out var value) ? Rounding.Percentage(value) : 1m))
-            .ToList();
+        // Il costo di carico cambia solo nei giorni con un'operazione: si ricalcola solo allora.
+        CostBasisResult? costBasis = null;
+        var included = -1;
+        var next = 0;
+
+        foreach (var snapshot in snapshots)
+        {
+            while (next < ordered.Count && ordered[next].Date <= snapshot.Date)
+            {
+                next++;
+            }
+
+            if (next != included)
+            {
+                costBasis = CostBasisCalculator.Calculate(ordered.Take(next), options.CostBasisMethod, options.Currency);
+                included = next;
+            }
+
+            var spots = costBasis!.Positions
+                .Select(p => p.Product.Metal)
+                .Distinct()
+                .Select(metal => SpotIn(lookup.On(metal, snapshot.Date), options.Currency, snapshot.Date, rates))
+                .ToList();
+            var pnl = PnLCalculator.Calculate(costBasis, spots, options.Valuation);
+
+            var metals = pnl.Positions
+                .GroupBy(p => p.Position.Product.Metal)
+                .OrderBy(g => g.Key)
+                .Select(g => new MetalHistoryValue(
+                    g.Key,
+                    Rounding.Amount(g.Aggregate(Money.Zero(options.Currency), (sum, p) => sum + p.Value).Amount),
+                    Rounding.Amount(g.Aggregate(Money.Zero(options.Currency), (sum, p) => sum + p.Position.CostBasis).Amount),
+                    Rounding.UnitPrice(spots.First(s => s.Metal == g.Key).PricePerGram.Amount)))
+                .ToList();
+
+            points.Add(new HistoryPoint(
+                snapshot.Date,
+                Rounding.Amount(snapshot.Value.Amount),
+                Rounding.Amount(snapshot.InvestedCapital.Amount),
+                index.TryGetValue(snapshot.Date, out var value) ? Rounding.Percentage(value) : 1m,
+                Rounding.Amount(pnl.TotalCostBasis.Amount),
+                Rounding.Amount(pnl.UnrealizedPnL.Amount),
+                PositionValuation.Percent(pnl.UnrealizedPercent),
+                metals));
+        }
+
+        return points;
     }
 
     private static RiskSummary? Risk(IReadOnlyList<WalletSnapshot> snapshots, decimal? annualizedReturn, WalletAnalysisOptions options)

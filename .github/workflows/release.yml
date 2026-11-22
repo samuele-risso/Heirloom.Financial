@@ -47,6 +47,13 @@ jobs:
             exit 1
           fi
 
+      - name: Controlla che il CHANGELOG abbia questa versione
+        run: |
+          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md non ha la sezione [$VERSION]: il tag è su un main non aggiornato o manca la voce nel CHANGELOG."
+            exit 1
+          fi
+
       - name: Ripristina, compila e testa
         run: |
           dotnet restore

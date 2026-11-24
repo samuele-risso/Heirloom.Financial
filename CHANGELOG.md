@@ -4,6 +4,14 @@ Tutte le modifiche rilevanti di Heirloom.Financial. Il formato segue
 [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e le versioni seguono il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [1.5.0] - 2026-11-23
+
+### Aggiunto
+- `Results.HoldingsAnalyzer.Summarize`: riepilogo di ciò che si possiede senza prezzi di mercato (`HoldingsSummary`):
+  lotti aperti, prodotti, pezzi (anche a costo sconosciuto), peso lordo e fino, costo di carico, anzianità media
+  pesata sul peso lordo, flusso di cassa; lo stesso per metallo (`HoldingsMetal`, con costo medio per grammo fino).
+  Gli stessi lotti aperti e lo stesso flusso di cassa di `WalletAnalyzer`.
+
 ## [1.4.0] - 2026-11-22
 
 ### Aggiunto

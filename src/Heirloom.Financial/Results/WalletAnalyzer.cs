@@ -203,7 +203,7 @@ public static class WalletAnalyzer
             gross.Grams > 0m ? 1m - coinShare : 0m);
     }
 
-    private static CashFlowSummary CashFlow(IReadOnlyList<Lot> lots, Currency currency)
+    internal static CashFlowSummary CashFlow(IReadOnlyList<Lot> lots, Currency currency)
     {
         var buys = lots.Where(l => l.Side == LotSide.Buy).ToList();
         var sells = lots.Where(l => l.Side == LotSide.Sell).ToList();
@@ -219,7 +219,7 @@ public static class WalletAnalyzer
             MoneyResult.From(sales - purchases));
     }
 
-    private static List<Lot> ConvertLots(IEnumerable<Lot> lots, Currency currency, DateOnly date, FxRateSeries? rates)
+    internal static List<Lot> ConvertLots(IEnumerable<Lot> lots, Currency currency, DateOnly date, FxRateSeries? rates)
     {
         var list = lots.ToList();
 

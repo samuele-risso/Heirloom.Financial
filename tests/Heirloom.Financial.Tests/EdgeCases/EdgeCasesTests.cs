@@ -10,8 +10,20 @@ using static Heirloom.Financial.Tests.TestData.OneOunce;
 namespace Heirloom.Financial.Tests.EdgeCases;
 
 /// <summary>
+/// I test che misurano il tempo: non girano in parallelo con gli altri, così la misura non dipende
+/// da quanti test stanno usando la CPU nello stesso momento.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class PerformanceCollection
+{
+    /// <summary>Il nome della collezione.</summary>
+    public const string Name = "Prestazioni";
+}
+
+/// <summary>
 /// I casi estremi raccolti durante lo sviluppo: tutti devono dare un risultato sensato o un errore chiaro.
 /// </summary>
+[Collection(PerformanceCollection.Name)]
 public class EdgeCaseTests
 {
     private static readonly DateOnly Day = new(2024, 3, 1);
@@ -148,15 +160,20 @@ public class EdgeCaseTests
             .ToList();
         var spots = Enumerable.Range(0, 731).Select(d => GoldSpot(1800m + d, start.AddDays(d))).ToList();
 
-        var watch = Stopwatch.StartNew();
-        var summary = WalletAnalyzer.Analyze(lots, spots, new WalletAnalysisOptions
+        var options = new WalletAnalysisOptions
         {
             Currency = Currency.EUR,
             ValuationDate = start.AddDays(730),
             Valuation = SpotValuation.Instance,
             CostBasisMethod = CostBasisMethod.SpecificLot,
             AnnualizationBasis = AnnualizationBasis.CalendarDays365,
-        });
+        };
+
+        // Un primo giro a vuoto: la compilazione JIT non deve finire nella misura.
+        WalletAnalyzer.Analyze(lots.Take(10), spots, options);
+
+        var watch = Stopwatch.StartNew();
+        var summary = WalletAnalyzer.Analyze(lots, spots, options);
         watch.Stop();
 
         Assert.Equal(1000m, Assert.Single(summary.Positions).Quantity);

@@ -34,4 +34,17 @@ public sealed record LotValuation(
     MoneyResult? UnrealizedPnL,
     decimal? UnrealizedPercent,
     bool HasDocumentedCost,
-    MoneyResult? EstimatedTax);
+    MoneyResult? EstimatedTax)
+{
+    /// <summary>Il peso lordo dei pezzi rimasti, in grammi.</summary>
+    public decimal GrossWeightGrams { get; init; }
+
+    /// <summary>Il valore se si vendesse oggi, meno le tasse stimate; null se l'analisi non ha una regola fiscale.</summary>
+    public MoneyResult? ValueAfterTax { get; init; }
+
+    /// <summary>
+    /// Il guadagno dopo le tasse stimate (valore − tasse − costo); null se il costo è sconosciuto
+    /// o se l'analisi non ha una regola fiscale.
+    /// </summary>
+    public MoneyResult? UnrealizedPnLAfterTax { get; init; }
+}

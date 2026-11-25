@@ -26,4 +26,11 @@ public sealed record MetalSummary(
     decimal? AverageCostPerFineGram,
     decimal SpotPerFineGram,
     decimal CoinWeightShare,
-    decimal BarWeightShare);
+    decimal BarWeightShare)
+{
+    /// <summary>
+    /// Di quanto lo spot di oggi è sopra (positivo) o sotto (negativo) il costo medio per grammo fino, come frazione
+    /// del costo medio a 4 decimali; null se non ci sono pezzi a costo noto.
+    /// </summary>
+    public decimal? SpotVsAverageCost { get; init; }
+}

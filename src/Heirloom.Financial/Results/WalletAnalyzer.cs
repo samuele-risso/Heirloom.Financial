@@ -145,7 +145,12 @@ public static class WalletAnalyzer
                 MoneyResult.FromOptional(pnl),
                 open.Cost is { IsZero: false } c && pnl is { } gain ? Rounding.Percentage(gain / c) : null,
                 open.HasDocumentedCost,
-                MoneyResult.FromOptional(tax));
+                MoneyResult.FromOptional(tax))
+            {
+                GrossWeightGrams = Rounding.Grams(open.GrossWeight).Grams,
+                ValueAfterTax = tax is { } t ? MoneyResult.From(value - t) : null,
+                UnrealizedPnLAfterTax = tax is { } t2 && pnl is { } lotGain ? MoneyResult.From(lotGain - t2) : null,
+            };
 
             return new ValuedLot(open, value, tax, result);
         }).ToList();
@@ -200,7 +205,12 @@ public static class WalletAnalyzer
             knownFine.Grams > 0m ? Rounding.UnitPrice(cost.Amount / knownFine.Grams) : null,
             Rounding.UnitPrice(spot.PricePerGram.Amount),
             coinShare,
-            gross.Grams > 0m ? 1m - coinShare : 0m);
+            gross.Grams > 0m ? 1m - coinShare : 0m)
+        {
+            SpotVsAverageCost = knownFine.Grams > 0m && cost.Amount > 0m
+                ? Rounding.Percentage((spot.PricePerGram.Amount - cost.Amount / knownFine.Grams) / (cost.Amount / knownFine.Grams))
+                : null,
+        };
     }
 
     internal static CashFlowSummary CashFlow(IReadOnlyList<Lot> lots, Currency currency)

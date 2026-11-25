@@ -32,6 +32,12 @@ public sealed record PositionValuation(
     MoneyResult UnrealizedPnL,
     decimal? UnrealizedPercent)
 {
+    /// <summary>Il peso lordo posseduto, in grammi.</summary>
+    public decimal GrossWeightGrams { get; init; }
+
+    /// <summary>Il valore di un pezzo al prezzo di oggi.</summary>
+    public MoneyResult? UnitValue { get; init; }
+
     /// <summary>Costruisce la riga, arrotondando ogni valore.</summary>
     /// <param name="pnl">Il guadagno della posizione.</param>
     /// <returns>La riga pronta da mostrare.</returns>
@@ -51,7 +57,11 @@ public sealed record PositionValuation(
             MoneyResult.From(position.CostBasis),
             MoneyResult.FromOptional(position.AverageCost),
             MoneyResult.From(pnl.UnrealizedPnL),
-            Percent(pnl.UnrealizedPercent));
+            Percent(pnl.UnrealizedPercent))
+        {
+            GrossWeightGrams = Rounding.Grams(position.Product.GrossWeight * position.Quantity).Grams,
+            UnitValue = position.Quantity > 0m ? MoneyResult.From(pnl.Value / position.Quantity) : null,
+        };
     }
 
     internal static decimal? Percent(decimal? fraction) => fraction is { } f ? Rounding.Percentage(f) : null;

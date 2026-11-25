@@ -4,6 +4,16 @@ Tutte le modifiche rilevanti di Heirloom.Financial. Il formato segue
 [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e le versioni seguono il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [1.6.0] - 2026-11-25
+
+### Aggiunto
+- `LotValuation`: `GrossWeightGrams`, `ValueAfterTax` (valore − tasse stimate) e `UnrealizedPnLAfterTax`
+  (guadagno − tasse stimate; null se il costo è sconosciuto).
+- `PositionValuation`: `GrossWeightGrams` e `UnitValue` (il valore di un pezzo al prezzo di oggi).
+- `MetalSummary.SpotVsAverageCost`: di quanto lo spot di oggi è sopra o sotto il costo medio per grammo fino.
+- `Results.PeriodChange.Since`: variazione di valore e guadagno rispetto a un giorno dello storico
+  (es. "rispetto a un mese fa"), in importo e in percentuale.
+
 ## [1.5.0] - 2026-11-23
 
 ### Aggiunto

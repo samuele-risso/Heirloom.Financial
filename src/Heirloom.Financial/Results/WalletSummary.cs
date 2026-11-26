@@ -59,4 +59,14 @@ public sealed record WalletSummary(
     IReadOnlyList<AllocationShare> AllocationByForm,
     PerformanceSummary? Performance,
     RiskSummary? Risk,
-    IReadOnlyList<string> Notes);
+    IReadOnlyList<string> Notes)
+{
+    /// <summary>Le tasse stimate sulle vendite già fatte; null senza regola fiscale nelle opzioni.</summary>
+    public MoneyResult? RealizedTax { get; init; }
+
+    /// <summary>Le tasse stimate di ogni vendita, in ordine di data; vuoto senza regola fiscale.</summary>
+    public IReadOnlyList<SaleTax> SaleTaxes { get; init; } = [];
+
+    /// <summary>Vendite e tasse stimate raggruppate per anno, dal più recente; vuoto senza regola fiscale.</summary>
+    public IReadOnlyList<TaxYear> TaxYears { get; init; } = [];
+}

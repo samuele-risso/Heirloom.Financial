@@ -19,4 +19,16 @@ public interface ITaxPolicy
     /// <param name="hasDocumentedCost">Se il costo è documentato (es. fattura).</param>
     /// <returns>Le tasse stimate, nella valuta del valore; mai negative.</returns>
     Money EstimateTax(Money value, Money? cost, bool hasDocumentedCost);
+
+    /// <summary>
+    /// Stima le tasse su una vendita fatta in un giorno preciso, con la regola in vigore quel giorno.
+    /// </summary>
+    /// <param name="value">L'incasso della vendita; non negativo.</param>
+    /// <param name="cost">Il costo d'acquisto dei pezzi venduti; null se sconosciuto.</param>
+    /// <param name="hasDocumentedCost">Se il costo è documentato (es. fattura).</param>
+    /// <param name="saleDate">Il giorno della vendita.</param>
+    /// <returns>Le tasse stimate, nella valuta del valore; mai negative.</returns>
+    /// <remarks>Senza un'implementazione propria vale la regola di oggi, come la versione senza data.</remarks>
+    Money EstimateTax(Money value, Money? cost, bool hasDocumentedCost, DateOnly saleDate) =>
+        EstimateTax(value, cost, hasDocumentedCost);
 }

@@ -85,6 +85,7 @@ public static class WalletAnalyzer
         var spotByMetal = todaySpots.ToDictionary(s => s.Metal);
         var openLots = ValueOpenLots(costBasis.OpenLots, spotByMetal, pnl.TotalValue, options);
         var tax = Taxes(openLots, currency, options.TaxPolicy);
+        var saleTaxes = SaleTaxes(costBasis, currency, options.TaxPolicy);
 
         return new WalletSummary(
             currency.ToIsoCode(),
@@ -113,7 +114,75 @@ public static class WalletAnalyzer
             AllocationShare.From(AllocationCalculator.Calculate(pnl, AllocationGrouping.Form, AllocationBasis.Value)),
             performance,
             risk,
-            notes);
+            notes)
+        {
+            RealizedTax = saleTaxes is null ? null : MoneyResult.From(saleTaxes.Value.Total),
+            SaleTaxes = saleTaxes?.Sales ?? [],
+            TaxYears = saleTaxes?.Years ?? [],
+        };
+    }
+
+    /// <summary>
+    /// Le tasse su ogni vendita già fatta, con la regola del giorno della vendita: i pezzi con fattura
+    /// pagano sul guadagno, gli altri sull'incasso.
+    /// </summary>
+    private static (Money Total, IReadOnlyList<SaleTax> Sales, IReadOnlyList<TaxYear> Years)? SaleTaxes(
+        CostBasisResult costBasis, Currency currency, ITaxPolicy? policy)
+    {
+        if (policy is null)
+        {
+            return null;
+        }
+
+        var total = Money.Zero(currency);
+        var sales = new List<(SaleTax Result, Money Proceeds, Money Pnl, Money Tax)>();
+
+        foreach (var sale in costBasis.Sales)
+        {
+            var proceeds = sale.Proceeds;
+            var documented = Math.Min(sale.DocumentedCostQuantity, sale.Sale.Quantity);
+            var documentedProceeds = documented == 0m ? Money.Zero(currency) : proceeds * documented / sale.Sale.Quantity;
+            var otherProceeds = proceeds - documentedProceeds;
+            var saleTax = Money.Zero(currency);
+
+            if (documented > 0m)
+            {
+                saleTax += policy.EstimateTax(documentedProceeds, sale.DocumentedCostOfSold, true, sale.Sale.Date);
+            }
+
+            if (otherProceeds.Amount > 0m)
+            {
+                saleTax += policy.EstimateTax(otherProceeds, null, false, sale.Sale.Date);
+            }
+
+            total += saleTax;
+            sales.Add((
+                new SaleTax(
+                    sale.Sale.Id,
+                    sale.Sale.Product.Name,
+                    sale.Sale.Date,
+                    sale.Sale.Quantity,
+                    documented,
+                    MoneyResult.From(proceeds),
+                    MoneyResult.From(sale.RealizedPnL),
+                    MoneyResult.From(saleTax)),
+                proceeds,
+                sale.RealizedPnL,
+                saleTax));
+        }
+
+        var years = sales
+            .GroupBy(s => s.Result.Date.Year)
+            .OrderByDescending(g => g.Key)
+            .Select(g => new TaxYear(
+                g.Key,
+                g.Count(),
+                MoneyResult.From(g.Aggregate(Money.Zero(currency), (sum, s) => sum + s.Proceeds)),
+                MoneyResult.From(g.Aggregate(Money.Zero(currency), (sum, s) => sum + s.Pnl)),
+                MoneyResult.From(g.Aggregate(Money.Zero(currency), (sum, s) => sum + s.Tax))))
+            .ToList();
+
+        return (total, sales.Select(s => s.Result).OrderBy(s => s.Date).ToList(), years);
     }
 
     /// <summary>Un lotto aperto valutato: i valori esatti per i totali e il risultato arrotondato per l'API.</summary>

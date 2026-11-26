@@ -15,6 +15,17 @@ namespace Heirloom.Financial.Positions;
 public sealed record SaleResult(Lot Sale, Money CostOfSold, decimal UnknownCostQuantity = 0m)
 {
     /// <summary>
+    /// Quanti dei pezzi venduti venivano da acquisti con il costo documentato (fattura).
+    /// Sempre zero con la media ponderata, dove gli acquisti si fondono.
+    /// </summary>
+    public decimal DocumentedCostQuantity { get; init; }
+
+    /// <summary>
+    /// Il costo dei pezzi venduti con il costo documentato: è già compreso in <see cref="CostOfSold"/>.
+    /// </summary>
+    public Money? DocumentedCostOfSold { get; init; }
+
+    /// <summary>
     /// I pezzi venduti di cui si conosceva il costo.
     /// </summary>
     public decimal KnownCostQuantity => Sale.Quantity - UnknownCostQuantity;

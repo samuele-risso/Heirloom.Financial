@@ -4,6 +4,23 @@ Tutte le modifiche rilevanti di Heirloom.Financial. Il formato segue
 [Keep a Changelog](https://keepachangelog.com/it-IT/1.1.0/) e le versioni seguono il
 [versionamento semantico](https://semver.org/lang/it/).
 
+## [1.7.0] - 2026-11-26
+
+Le tasse sulle vendite già fatte, con la regola in vigore il giorno della vendita (HA-047).
+
+### Aggiunto
+- `ITaxPolicy.EstimateTax(value, cost, hasDocumentedCost, saleDate)`: stima con la regola del giorno della vendita.
+  Ha un'implementazione predefinita che usa la versione senza data, quindi le regole esistenti continuano a funzionare.
+- `ItalianTaxPolicy`: senza documento, le vendite fino al 31/12/2023 pagano il 26% sul 25% dell'incasso,
+  quelle dal 1/1/2024 sull'intero incasso (`FullValueRuleFrom`, `UndocumentedBaseBefore2024`).
+- `SaleResult.DocumentedCostQuantity` e `DocumentedCostOfSold`: quanti pezzi venduti venivano da acquisti
+  con fattura, e il loro costo (FIFO e lotto specifico; sempre zero con la media ponderata).
+- `WalletSummary.RealizedTax`, `SaleTaxes` (le tasse di ogni vendita) e `TaxYears` (vendite, guadagno
+  e tasse per anno solare, dal più recente). Vuoti senza regola fiscale nelle opzioni.
+
+### Invariato
+- `EstimateTax` senza data e le tasse stimate sui lotti aperti: valgono come se si vendesse oggi.
+
 ## [1.6.0] - 2026-11-25
 
 ### Aggiunto

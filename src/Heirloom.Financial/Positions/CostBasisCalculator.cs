@@ -77,14 +77,19 @@ public static class CostBasisCalculator
                 continue;
             }
 
-            var (cost, unknown) = method switch
+            var taken = new Taken(Money.Zero(currency), 0m, 0m, Money.Zero(currency));
+            taken = method switch
             {
-                CostBasisMethod.WeightedAverage => RemoveWeightedAverage(parcels, lot.Quantity, currency),
-                CostBasisMethod.Fifo => RemoveFifo(parcels, lot.Quantity, currency),
-                _ => RemoveSpecific(parcels, lot, currency),
+                CostBasisMethod.WeightedAverage => RemoveWeightedAverage(parcels, lot.Quantity, taken),
+                CostBasisMethod.Fifo => RemoveFifo(parcels, lot.Quantity, taken),
+                _ => RemoveSpecific(parcels, lot, taken),
             };
 
-            sales.Add(new SaleResult(lot, cost, unknown));
+            sales.Add(new SaleResult(lot, taken.Cost, taken.Unknown)
+            {
+                DocumentedCostQuantity = taken.Documented,
+                DocumentedCostOfSold = taken.Documented > 0m ? taken.DocumentedCost : null,
+            });
         }
 
         var positions = books
@@ -160,11 +165,9 @@ public static class CostBasisCalculator
         parcels.AddLast(parcel);
     }
 
-    private static (Money Cost, decimal Unknown) RemoveFifo(LinkedList<Parcel> parcels, decimal quantity, Currency currency)
+    private static Taken RemoveFifo(LinkedList<Parcel> parcels, decimal quantity, Taken taken)
     {
         var remaining = quantity;
-        var cost = Money.Zero(currency);
-        var unknown = 0m;
 
         // Si consumano i pacchetti dal più vecchio.
         while (remaining > 0m)
@@ -172,15 +175,15 @@ public static class CostBasisCalculator
             var node = parcels.First
                 ?? throw new InvalidOperationException("Vendita superiore al posseduto: dovrebbe essere già stata rifiutata.");
 
-            var taken = Math.Min(remaining, node.Value.Quantity);
-            Take(parcels, node, taken, ref cost, ref unknown);
-            remaining -= taken;
+            var part = Math.Min(remaining, node.Value.Quantity);
+            taken = Take(parcels, node, part, taken);
+            remaining -= part;
         }
 
-        return (cost, unknown);
+        return taken;
     }
 
-    private static (Money Cost, decimal Unknown) RemoveWeightedAverage(LinkedList<Parcel> parcels, decimal quantity, Currency currency)
+    private static Taken RemoveWeightedAverage(LinkedList<Parcel> parcels, decimal quantity, Taken taken)
     {
         var known = Find(parcels, p => p.KnownCost);
         var unknownNode = Find(parcels, p => !p.KnownCost);
@@ -201,23 +204,20 @@ public static class CostBasisCalculator
             unknownOut = quantity - knownOut;
         }
 
-        var cost = Money.Zero(currency);
-        var unknown = 0m;
-
         if (known is not null && knownOut > 0m)
         {
-            Take(parcels, known, knownOut, ref cost, ref unknown);
+            taken = Take(parcels, known, knownOut, taken);
         }
 
         if (unknownNode is not null && unknownOut > 0m)
         {
-            Take(parcels, unknownNode, unknownOut, ref cost, ref unknown);
+            taken = Take(parcels, unknownNode, unknownOut, taken);
         }
 
-        return (cost, unknown);
+        return taken;
     }
 
-    private static (Money Cost, decimal Unknown) RemoveSpecific(LinkedList<Parcel> parcels, Lot sale, Currency currency)
+    private static Taken RemoveSpecific(LinkedList<Parcel> parcels, Lot sale, Taken taken)
     {
         var node = Find(parcels, p => string.Equals(p.LotId, sale.MatchedLotId, StringComparison.Ordinal))
             ?? throw new ArgumentException(
@@ -233,43 +233,46 @@ public static class CostBasisCalculator
                 "lots");
         }
 
-        var cost = Money.Zero(currency);
-        var unknown = 0m;
-        Take(parcels, node, sale.Quantity, ref cost, ref unknown);
-        return (cost, unknown);
+        return Take(parcels, node, sale.Quantity, taken);
     }
 
     /// <summary>Toglie dei pezzi da un pacchetto e ne somma il costo (o la quantità, se il costo è sconosciuto).</summary>
-    private static void Take(LinkedList<Parcel> parcels, LinkedListNode<Parcel> node, decimal quantity, ref Money cost, ref decimal unknown)
+    private static Taken Take(LinkedList<Parcel> parcels, LinkedListNode<Parcel> node, decimal quantity, Taken taken)
     {
         var parcel = node.Value;
 
+        // Con la media ponderata il pacchetto non ha un acquisto d'origine: il documento non si conosce.
+        var documented = parcel.KnownCost && parcel.Source is { HasDocumentedCost: true };
+
+        // Il pacchetto esce tutto: si prende il suo costo esatto, senza divisioni.
+        // Esce solo una parte: costo proporzionale ai pezzi venduti.
+        var whole = quantity >= parcel.Quantity;
+        var partCost = whole ? parcel.Cost : parcel.Cost / parcel.Quantity * quantity;
+
         if (!parcel.KnownCost)
         {
-            unknown += quantity;
+            taken = taken with { Unknown = taken.Unknown + quantity };
+        }
+        else
+        {
+            taken = taken with { Cost = taken.Cost + partCost };
         }
 
-        if (quantity >= parcel.Quantity)
+        if (documented)
         {
-            // Il pacchetto esce tutto: si prende il suo costo esatto, senza divisioni.
-            if (parcel.KnownCost)
-            {
-                cost += parcel.Cost;
-            }
+            taken = taken with { Documented = taken.Documented + quantity, DocumentedCost = taken.DocumentedCost + partCost };
+        }
 
+        if (whole)
+        {
             parcels.Remove(node);
-            return;
         }
-
-        // Esce solo una parte: costo proporzionale ai pezzi venduti.
-        var partCost = parcel.Cost / parcel.Quantity * quantity;
-
-        if (parcel.KnownCost)
+        else
         {
-            cost += partCost;
+            node.Value = parcel with { Quantity = parcel.Quantity - quantity, Cost = parcel.Cost - partCost };
         }
 
-        node.Value = parcel with { Quantity = parcel.Quantity - quantity, Cost = parcel.Cost - partCost };
+        return taken;
     }
 
     private static LinkedListNode<Parcel>? Find(LinkedList<Parcel> parcels, Func<Parcel, bool> match)
@@ -292,4 +295,11 @@ public static class CostBasisCalculator
     /// <param name="LotId">L'id dell'acquisto d'origine; usato dal metodo per lotto specifico.</param>
     /// <param name="Source">L'acquisto d'origine; null con la media ponderata, dove i pacchetti si fondono.</param>
     private readonly record struct Parcel(decimal Quantity, Money Cost, bool KnownCost, string? LotId, Lot? Source);
+
+    /// <summary>Quello che esce dai pacchetti per una vendita.</summary>
+    /// <param name="Cost">Il costo dei pezzi a costo noto.</param>
+    /// <param name="Unknown">I pezzi a costo sconosciuto.</param>
+    /// <param name="Documented">I pezzi venuti da acquisti con il costo documentato.</param>
+    /// <param name="DocumentedCost">Il costo di quei pezzi.</param>
+    private readonly record struct Taken(Money Cost, decimal Unknown, decimal Documented, Money DocumentedCost);
 }
